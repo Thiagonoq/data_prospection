@@ -26,14 +26,15 @@ def main():
 
         for index, row in data_df.iterrows():
             try:
-                if pd.isna(row['title']) or (pd.isna(row['phoneNumber']) and pd.isna(row['phoneFromWebsite'])):
+                # Corrigindo a verificação aqui:
+                if pd.isna(row['title']) or pd.isna(row['phoneNumber']) and ('phoneFromWebsite' not in data_df.columns or pd.isna(row.get('phoneFromWebsite', pd.NA))):
                     continue
 
                 name = row['title']
                 website = row['website']
                 address = row['address']
                 phone_number = format_phone(str(row['phoneNumber']))
-                secondary_phone_number = format_phone(str(row['phoneFromWebsite'])) if not pd.isna(row['phoneFromWebsite']) else 'nan'
+                secondary_phone_number = format_phone(str(row['phoneFromWebsite'])) if 'phoneFromWebsite' in data_df.columns and not pd.isna(row['phoneFromWebsite']) else 'nan'
 
                 phone_numbers = ",".join([phone_number, secondary_phone_number] if secondary_phone_number != 'nan' else [phone_number])
                 if not pd.isna(website):

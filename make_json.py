@@ -5,12 +5,16 @@ import json
 import requests
 import re
 import phonenumbers
+import dotenv
+import os
 
 abs_path = Path(__file__).parent.parent
 
-ZAPI_TOKEN="76D870027FDE0133FDCCB517"
-ZAPI_INSTANCE="3B94EC8107E6603D5ADEA6D2A1CCEF8E"
+# import dotenv
+dotenv.load_dotenv()
 
+ZAPI_TOKEN = os.getenv('ZAPI_TOKEN')
+ZAPI_INSTANCE = os.getenv('ZAPI_INSTANCE')
 
 def number_with_zap(number):
     # formated_number = format_phone(number)
