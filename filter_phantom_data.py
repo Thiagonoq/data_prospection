@@ -31,8 +31,8 @@ def main():
             name = row['title']
             website = row['website']
             address = row['address']
-            phone_number = format_phone(row['phoneNumber'])
-            secondary_phone_number = format_phone(row['phoneFromWebsite']) if not pd.isna(row['phoneFromWebsite']) else 'nan'
+            phone_number = format_phone(str(row['phoneNumber']))
+            secondary_phone_number = format_phone(str(row['phoneFromWebsite'])) if not pd.isna(row['phoneFromWebsite']) else 'nan'
 
             phone_numbers = ",".join([phone_number, secondary_phone_number] if secondary_phone_number != 'nan' else [phone_number])
             if not pd.isna(website):
@@ -40,15 +40,21 @@ def main():
                     whatsapp_number = format_phone(website.split('/')[-1])
                     phone_numbers =','.join([phone_numbers, whatsapp_number])
             
-            df.at[index, 'nome_fantasia'] = name
-            df.at[index, 'website'] = website
-            df.at[index, 'categoria'] = row['category']
-            df.at[index, 'endereco'] = address
-            df.at[index, 'regiao'] = region_name
-            df.at[index, 'telefones'] = phone_numbers
+            new_row = {
+                'nome_fantasia': name,
+                'website': website,
+                'categoria': row['category'],
+                'endereco': address,
+                'regiao': region_name,
+                'telefones': phone_numbers
+            }
+            df.loc[len(df)] = new_row
 
         excel_handler.save_excel(dfs, bd_path, bd_path, sheet_name=sheet_name)
-        print(f'Regiao {region_name} salva no arquivo.')      
+        print(f'Regiao {region_name} salva no arquivo.')    
+        
+    excel_handler.save_excel(dfs, bd_path, bd_path, sheet_name=sheet_name)
+    print(f'Arquivo {bd_path} salvo com sucesso.')
 
 
 def format_phone(phone, country="BR"):
@@ -63,17 +69,4 @@ def format_phone(phone, country="BR"):
         return phone
 
 if __name__ == '__main__':
-    # main()
-    phone_number = '5531900000000'
-    secondary_phone_number = '553595658756'
-    website = 'ahttps://wa.me/553199999999'
-    phone_numbers = ",".join([phone_number, secondary_phone_number] if secondary_phone_number != 'nan' else [phone_number])
-    if not pd.isna(website):
-        if website.startswith('https://wa.me/') or website.startswith('http://wa.me/'):
-            whatsapp_number = format_phone(website.split('/')[-1])
-    
-            phone_numbers =','.join([phone_numbers, whatsapp_number])
-            print(phone_numbers)
-
-    print(phone_numbers)
-                                    
+    main()
