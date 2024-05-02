@@ -30,15 +30,24 @@ def number_with_zap(number):
     }
     try:
         response = requests.post(url, data=json.dumps(payload), headers=headers)
-        response.raise_for_status()
+
+        if response.status_code != 200:
+            print(f"Erro {response.status_code} na API: {response.text}")
+            return 'erro'
+        
         response_data = response.json()
 
-        if response_data[0]['exists']:
+        if response_data and 'exists' in response_data[0] and response_data[0]['exists']:
             return response_data[0]['outputPhone']
         else:
             return None
+        
     except requests.RequestException as e:
         print(f"Erro ao fazer a chamada para o ZAPI: {e}")
+        return None
+    
+    except ValueError:
+        print(f"Erro ao fazer a chamada para o ZAPI: {response.text}")
         return None
 
 def format_phone(phone, country="BR"):
@@ -51,21 +60,21 @@ def format_phone(phone, country="BR"):
     except phonenumbers.NumberParseException:
         return phone
 
-def create_google_json(abs_path):
-    excel_path = abs_path /'clientes_com_telefone.xlsx'
+def create_google_json(abs_path, max_clients=500):
+    excel_path = abs_path /'bd_google_maps.xlsx'
     json_path = abs_path /'raspagem_hortifruti_google.json'
 
-    sheet_name = 'com_tel'
+    sheet_name = 'Hortifruti'
     dfs = excel_handler.import_excel(excel_path)
     df_contacts = dfs[sheet_name]
     clients_data = []
     seen_phones = set()
 
     for index, row in df_contacts.iterrows():
-        if str(row["title"]) == "nan" or str(row["phoneNumber"]) == "nan":
+        if str(row["nome_fantasia"]) == "nan" or str(row["telefones"]) == "nan":
             continue
         
-        phone_number = row["phoneNumber"]
+        phone_number = row["telefones"]
         if phone_number in seen_phones or row['repeated'] == 'yes':
             print(f'Telefone {phone_number} já cadastrado...')
             df_contacts.at[index, 'repeated'] = 'yes'
@@ -74,18 +83,26 @@ def create_google_json(abs_path):
         seen_phones.add(phone_number)
         phone = number_with_zap(phone_number)
         
+        if phone == 'erro':
+            print(f'Erro ao processar telefone {phone_number}.')
+            continue
+
         if phone is None or row['hasWhatsapp'] == 'no':
-            print(f'Contato {row["title"]} não possui whatsapp.')
+            print(f'Contato {row["nome_fantasia"]} não possui whatsapp.')
             df_contacts.at[index, 'hasWhatsapp'] = 'no'
             continue
+
         df_contacts.at[index, 'numberSearched'] = phone
 
         clients_data.append({
-            "name": row["title"],
-            "address": row["address"] if str(row["address"]) != "nan" else None,
+            "name": row["nome_fantasia"],
+            "address": row["endereco"] if str(row["endereco"]) != "nan" else None,
             "phone": phone
         })
 
+        if len(clients_data) > max_clients:
+            break
+    
     with open(json_path, 'w', encoding='utf-8') as f:
         json.dump(clients_data, f, indent=4, ensure_ascii=False, allow_nan=True)
     print(f'Arquivo {json_path} criado com sucesso.')
@@ -119,6 +136,10 @@ def create_db_json(abs_path, max_clients=500):
             seen_phones.add(formatted_phone)
             whatsapp_phone = number_with_zap(formatted_phone)
         
+            if whatsapp_phone == 'erro':
+                print(f'Erro ao processar telefone {formatted_phone}.')
+                continue
+            
             if whatsapp_phone:
                 valid_phone = whatsapp_phone
                 df_contacts.at[index, 'hasWhatsapp'] = 'yes'
@@ -162,7 +183,6 @@ def send_link(ZAPI_INSTANCE, ZAPI_TOKEN):
 
 # Criar uma nova função, para separar os telefones que estão juntos.
 if __name__ == '__main__':
-    create_db_json(abs_path, 500)
-    # create_google_json(abs_path)
+    # create_db_json(abs_path, 500)
+    create_google_json(abs_path, 100)
     # number_with_zap('+55 31 998929068')
-    # send_link(ZAPI_INSTANCE, ZAPI_TOKEN)
