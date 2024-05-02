@@ -25,20 +25,24 @@ def main():
         data_df = data_dfs[sheet_name]
 
         for index, row in data_df.iterrows():
-            if pd.isna(row['title']) or (pd.isna(row['phoneNumber']) and pd.isna(row['phoneFromWebsite'])):
+            try:
+                if pd.isna(row['title']) or (pd.isna(row['phoneNumber']) and pd.isna(row['phoneFromWebsite'])):
+                    continue
+
+                name = row['title']
+                website = row['website']
+                address = row['address']
+                phone_number = format_phone(str(row['phoneNumber']))
+                secondary_phone_number = format_phone(str(row['phoneFromWebsite'])) if not pd.isna(row['phoneFromWebsite']) else 'nan'
+
+                phone_numbers = ",".join([phone_number, secondary_phone_number] if secondary_phone_number != 'nan' else [phone_number])
+                if not pd.isna(website):
+                    if website.startswith('https://wa.me/') or website.startswith('http://wa.me/'):
+                        whatsapp_number = format_phone(website.split('/')[-1])
+                        phone_numbers =','.join([phone_numbers, whatsapp_number])
+            except Exception as e:
+                print(f'Erro ao processar linha {index}: {e}')
                 continue
-
-            name = row['title']
-            website = row['website']
-            address = row['address']
-            phone_number = format_phone(str(row['phoneNumber']))
-            secondary_phone_number = format_phone(str(row['phoneFromWebsite'])) if not pd.isna(row['phoneFromWebsite']) else 'nan'
-
-            phone_numbers = ",".join([phone_number, secondary_phone_number] if secondary_phone_number != 'nan' else [phone_number])
-            if not pd.isna(website):
-                if website.startswith('https://wa.me/') or website.startswith('http://wa.me/'):
-                    whatsapp_number = format_phone(website.split('/')[-1])
-                    phone_numbers =','.join([phone_numbers, whatsapp_number])
             
             new_row = {
                 'nome_fantasia': name,
