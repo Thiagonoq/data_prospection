@@ -11,7 +11,7 @@ import os
 abs_path = Path(__file__).parent.parent
 
 # import dotenv
-dotenv.load_dotenv()
+dotenv.load_dotenv(dotenv_path=abs_path / '.env', override=True)
 
 ZAPI_TOKEN = os.getenv('ZAPI_TOKEN')
 ZAPI_INSTANCE = os.getenv('ZAPI_INSTANCE')
@@ -31,12 +31,12 @@ def number_with_zap(number):
     try:
         response = requests.post(url, data=json.dumps(payload), headers=headers)
 
+        response_data = response.json()
+
         if response.status_code != 200:
             print(f"Erro {response.status_code} na API: {response.text}")
             return 'erro'
         
-        response_data = response.json()
-
         if response_data and 'exists' in response_data[0] and response_data[0]['exists']:
             return response_data[0]['outputPhone']
         else:
@@ -71,34 +71,40 @@ def create_google_json(abs_path, max_clients=500):
     seen_phones = set()
 
     for index, row in df_contacts.iterrows():
-        if str(row["nome_fantasia"]) == "nan" or str(row["telefones"]) == "nan":
+        if str(row["nome_fantasia"]) == "nan" or str(row["telefones"]) == "nan" or str(row["hasWhatsapp"]) == "no":
             continue
         
-        phone_number = row["telefones"]
-        if phone_number in seen_phones or row['repeated'] == 'yes':
-            print(f'Telefone {phone_number} já cadastrado...')
-            df_contacts.at[index, 'repeated'] = 'yes'
-            continue
+        phone_numbers = row["telefones"].split(',')
+        valid_phone = None
 
-        seen_phones.add(phone_number)
-        phone = number_with_zap(phone_number)
+        for phone_number in phone_numbers:
+            formatted_phone = format_phone(phone_number.strip())
+            if formatted_phone in seen_phones or row['repeated'] == 'yes':
+                print(f'Telefone {formatted_phone} já cadastrado...')
+                df_contacts.at[index, 'repeated'] = 'yes'
+                continue
+
+            seen_phones.add(phone_number)
+            whatsapp_phone = number_with_zap(phone_number)
         
-        if phone == 'erro':
-            print(f'Erro ao processar telefone {phone_number}.')
-            continue
+            if whatsapp_phone == 'erro':
+                print(f'Erro ao processar telefone {phone_number}.')
+                continue
 
-        if phone is None or row['hasWhatsapp'] == 'no':
-            print(f'Contato {row["nome_fantasia"]} não possui whatsapp.')
-            df_contacts.at[index, 'hasWhatsapp'] = 'no'
-            continue
+            if whatsapp_phone:
+                valid_phone = whatsapp_phone
+                df_contacts.at[index, 'hasWhatsapp'] = 'yes'
+                df_contacts.at[index, 'numberSearched'] = whatsapp_phone
+                break 
+            else:
+                df_contacts.at[index, 'hasWhatsapp'] = 'no'
 
-        df_contacts.at[index, 'numberSearched'] = phone
-
-        clients_data.append({
-            "name": row["nome_fantasia"],
-            "address": row["endereco"] if str(row["endereco"]) != "nan" else None,
-            "phone": phone
-        })
+        if valid_phone is not None:
+            clients_data.append({
+                "name": row["nome_fantasia"],
+                "address": row["endereco"] if str(row["endereco"]) != "nan" else None,
+                "phone": whatsapp_phone
+            })
 
         if len(clients_data) > max_clients:
             break
@@ -139,7 +145,7 @@ def create_db_json(abs_path, max_clients=500):
             if whatsapp_phone == 'erro':
                 print(f'Erro ao processar telefone {formatted_phone}.')
                 continue
-            
+
             if whatsapp_phone:
                 valid_phone = whatsapp_phone
                 df_contacts.at[index, 'hasWhatsapp'] = 'yes'
@@ -184,5 +190,5 @@ def send_link(ZAPI_INSTANCE, ZAPI_TOKEN):
 # Criar uma nova função, para separar os telefones que estão juntos.
 if __name__ == '__main__':
     # create_db_json(abs_path, 500)
-    create_google_json(abs_path, 100)
+    create_google_json(abs_path, 200)
     # number_with_zap('+55 31 998929068')
