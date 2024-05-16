@@ -26,7 +26,6 @@ def main():
 
         for index, row in data_df.iterrows():
             try:
-                # Corrigindo a verificação aqui:
                 if pd.isna(row['title']) or pd.isna(row['phoneNumber']) and ('phoneFromWebsite' not in data_df.columns or pd.isna(row.get('phoneFromWebsite', pd.NA))):
                     continue
 
@@ -41,19 +40,21 @@ def main():
                     if website.startswith('https://wa.me/') or website.startswith('http://wa.me/'):
                         whatsapp_number = format_phone(website.split('/')[-1])
                         phone_numbers =','.join([phone_numbers, whatsapp_number])
+            
+                if not df['telefones'].str.contains(phone_number).any():
+                    new_row = {
+                        'nome_fantasia': name,
+                        'website': website,
+                        'categoria': row['category'],
+                        'endereco': address,
+                        'regiao': region_name,
+                        'telefones': phone_numbers
+                    }
+                    df.loc[len(df)] = new_row
+            
             except Exception as e:
                 print(f'Erro ao processar linha {index}: {e}')
                 continue
-            
-            new_row = {
-                'nome_fantasia': name,
-                'website': website,
-                'categoria': row['category'],
-                'endereco': address,
-                'regiao': region_name,
-                'telefones': phone_numbers
-            }
-            df.loc[len(df)] = new_row
 
         excel_handler.save_excel(dfs, bd_path, bd_path, sheet_name=sheet_name)
         print(f'Regiao {region_name} salva no arquivo.')    
