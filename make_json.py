@@ -60,7 +60,7 @@ def format_phone(phone, country="BR"):
     except phonenumbers.NumberParseException:
         return phone
 
-def create_google_json(abs_path, max_clients=500):
+def create_google_json(abs_path, max_clients="unlimited"):
     excel_path = abs_path /'bd_google_maps.xlsx'
     json_path = abs_path /'raspagem_hortifruti_google.json'
 
@@ -106,7 +106,7 @@ def create_google_json(abs_path, max_clients=500):
                 "phone": whatsapp_phone
             })
 
-        if len(clients_data) > max_clients:
+        if max_clients != "unlimited" and len(clients_data) > max_clients:
             break
     
     with open(json_path, 'w', encoding='utf-8') as f:
@@ -115,7 +115,7 @@ def create_google_json(abs_path, max_clients=500):
 
     excel_handler.save_excel(dfs, excel_path, excel_path, sheet_name=sheet_name)
 
-def create_db_json(abs_path, max_clients=500):
+def create_db_json(abs_path, max_clients="unlimited"):
     excel_path = abs_path /'bd_empresas.xlsx'
     json_path = abs_path /'raspagem_hortifruti_bd_empresas.json'
 
@@ -161,7 +161,7 @@ def create_db_json(abs_path, max_clients=500):
                 "phone": valid_phone
             })
 
-        if len(clients_data) > max_clients:
+        if max_clients != "unlimited" and len(clients_data) > max_clients:
             break
 
     with open(json_path, 'w', encoding='utf-8') as f:
@@ -190,5 +190,5 @@ def send_link(ZAPI_INSTANCE, ZAPI_TOKEN):
 # Criar uma nova função, para separar os telefones que estão juntos.
 if __name__ == '__main__':
     # create_db_json(abs_path, 500)
-    create_google_json(abs_path, 200)
+    create_google_json(abs_path)
     # number_with_zap('+55 31 998929068')
